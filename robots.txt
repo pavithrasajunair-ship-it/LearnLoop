@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /tests/
+
+Sitemap: https://learnloop-jade-ten.vercel.app/sitemap.xml
