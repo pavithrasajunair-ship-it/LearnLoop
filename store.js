@@ -5,7 +5,7 @@ const LL = (() => {
   const KEY = 'learnloop.v1';
   const DAY = 86400000;
   const FREE_DAILY = 15; // free plan: answered questions per day (soft limit: enforced in the browser only)
-  const fresh = () => ({v: 1, plan: 'free', profile: null, diagnosticDone: false, attempts: [], views: [], sessions: [], quick: null, prefs: {goal: 5, theme: 'auto'}});
+  const fresh = () => ({v: 1, plan: 'free', profile: null, diagnosticDone: false, attempts: [], views: [], sessions: [], days: {}, quick: null, prefs: {goal: 5, theme: 'auto'}});
   let state = fresh();
   let now = () => Date.now();
   let mem = null; // fallback when localStorage is unavailable
@@ -22,6 +22,53 @@ const LL = (() => {
   const reset = () => { state = fresh(); try { localStorage.removeItem(KEY); } catch (e) {} };
   const dayKey = t => { const d = new Date(t); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); };
 
+  /* ---- active days (local time) ----
+     iso = zero-padded YYYY-MM-DD in the learner's LOCAL time zone. state.days maps iso -> answers that day. It is kept
+     separately so streaks survive the 3000-attempt cap, and it is merged with attempts so data saved by older versions still counts. */
+  const pad = n => (n < 10 ? '0' : '') + n;
+  const isoDay = t => { const d = new Date(t); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
+  const parseIso = s => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; };
+  // calendar-day arithmetic via the Date constructor, so daylight-saving changes never skip or repeat a day
+  const shiftIso = (iso, n) => { const d = parseIso(iso); return isoDay(new Date(d.getFullYear(), d.getMonth(), d.getDate() + n).getTime()); };
+  function dayCounts() {
+    const out = {};
+    if (state.days && typeof state.days === 'object') Object.keys(state.days).forEach(k => { if (parseIso(k) && state.days[k] > 0) out[k] = +state.days[k]; });
+    const fromAttempts = {};
+    (state.attempts || []).forEach(a => { const k = isoDay(a.t); fromAttempts[k] = (fromAttempts[k] || 0) + 1; });
+    Object.keys(fromAttempts).forEach(k => { out[k] = Math.max(out[k] || 0, fromAttempts[k]); });
+    return out;
+  }
+  function streakInfo() {
+    const counts = dayCounts(), days = Object.keys(counts).sort(), today = isoDay(now());
+    let best = 0, run = 0, prev = null;
+    days.forEach(d => { run = prev && shiftIso(prev, 1) === d ? run + 1 : 1; if (run > best) best = run; prev = d; });
+    let cur = 0, k = counts[today] ? today : shiftIso(today, -1); // today not done yet does not break yesterday's streak
+    while (counts[k]) { cur++; k = shiftIso(k, -1); }
+    return {current: cur, best: Math.max(best, cur), todayDone: !!counts[today], totalDays: days.length};
+  }
+  // one month as a calendar grid, Monday first. month is 0-11.
+  function monthGrid(year, month) {
+    const counts = dayCounts(), today = isoDay(now()), first = new Date(year, month, 1), n = new Date(year, month + 1, 0).getDate();
+    const cells = []; for (let i = 0; i < (first.getDay() + 6) % 7; i++) cells.push(null);
+    for (let d = 1; d <= n; d++) { const iso = year + '-' + pad(month + 1) + '-' + pad(d); cells.push({iso, day: d, count: counts[iso] || 0, active: !!counts[iso], today: iso === today, future: iso > today}); }
+    return {year: first.getFullYear(), month: first.getMonth(), cells, activeDays: cells.filter(c => c && c.active).length};
+  }
+  /* ---- weak-topic ranking ----
+     Accuracy is taken over the last 10 answers on the concept and smoothed ((right + 1) / (n + 2)) so one lucky or unlucky answer does not decide the ranking.
+     A concept is weak when its smoothed accuracy is under 75% or it still has an open misconception. Weakest first; ties go to the concept with more evidence. */
+  function weakTopics(ids, max) {
+    const out = [];
+    ids.forEach(id => {
+      const a = state.attempts.filter(x => x.concept === id); if (!a.length) return;
+      const recent = a.slice(-10), r = recent.filter(x => x.ok).length, open = openMisconceptions(id);
+      const score = (r + 1) / (recent.length + 2);
+      if (score < 0.75 || open.length) out.push({id, n: a.length, c: a.filter(x => x.ok).length, acc: a.filter(x => x.ok).length / a.length, score, open, last: a[a.length - 1].t});
+    });
+    out.sort((x, y) => x.score - y.score || y.n - x.n || y.last - x.last);
+    return out.slice(0, max || 5);
+  }
+  function accuracy(id) { const a = state.attempts.filter(x => x.concept === id), c = a.filter(x => x.ok).length; return {n: a.length, c, acc: a.length ? c / a.length : null}; }
+
   function setProfile(name, goal) {
     name = String(name || '').trim().replace(/\s+/g, ' ').slice(0, 30);
     if (!name) return false;
@@ -31,6 +78,8 @@ const LL = (() => {
   // kind: check | predict | bug | fix | diagnostic ; src: tutor | detective | quick | diagnostic
   function record(a) {
     state.attempts.push({t: now(), concept: a.concept, kind: a.kind, ok: !!a.ok, m: a.m || null, src: a.src || 'detective'});
+    if (!state.days || typeof state.days !== 'object') state.days = {};
+    const k = isoDay(now()); state.days[k] = (state.days[k] || 0) + 1;
     if (state.attempts.length > 3000) state.attempts.splice(0, state.attempts.length - 3000);
     save();
   }
@@ -73,13 +122,7 @@ const LL = (() => {
   const limit = () => state.plan === 'premium' ? Infinity : FREE_DAILY;
   const remaining = () => Math.max(0, limit() - todayCount());
   const atLimit = () => remaining() === 0;
-  function streak() {
-    const days = new Set(state.attempts.map(a => dayKey(a.t)));
-    let t = now(), n = 0;
-    if (!days.has(dayKey(t))) t -= DAY; // today not done yet does not break yesterday's streak
-    while (days.has(dayKey(t))) { n++; t -= DAY; }
-    return n;
-  }
+  const streak = () => streakInfo().current;
   const studiedRecently = () => {
     const seen = new Map();
     for (let i = state.attempts.length - 1; i >= 0; i--) { const a = state.attempts[i]; if (!seen.has(a.concept)) seen.set(a.concept, a.t); }
@@ -95,7 +138,7 @@ const LL = (() => {
   function addSession(s) { state.sessions.push(Object.assign({t: now()}, s)); save(); }
   return {
     get state() { return state; }, load, save, reset, setProfile, record, view, stats, openMisconceptions, viewedStyles,
-    recommendStyle, todayCount, limit, remaining, atLimit, FREE_DAILY, streak, studiedRecently, history, addSession, dayKey,
+    recommendStyle, todayCount, limit, remaining, atLimit, FREE_DAILY, streak, streakInfo, monthGrid, weakTopics, accuracy, studiedRecently, history, addSession, dayKey, isoDay, shiftIso,
     _setNow(f) { now = f; }, _fresh: fresh, _set(s) { state = s; },
   };
 })();

@@ -114,3 +114,15 @@ a.card:hover,.stagger>.card:hover{transform:translateY(-3px)}
 .bar>i{transform-origin:left;animation:grow .9s cubic-bezier(.2,.7,.2,1) both .2s}
 @keyframes grow{from{transform:scaleX(0)}}
 @media(prefers-reduced-motion:reduce){.lm-run,.lm-glow{animation:none;stroke-dasharray:none}.hero.intro:before{animation:none}.card:hover{transform:none!important}}
+
+/* ---- streak calendar ---- */
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:.7rem;max-width:380px}
+.cal-h{font-size:.72rem;font-weight:700;color:var(--mute);text-align:center}
+.cal-d{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:10px;font-size:.88rem;background:var(--panel2);color:var(--mute);border:2px solid transparent}
+.cal-d.on{background:linear-gradient(135deg,var(--acc),var(--acc2));color:var(--acc-ink);font-weight:800}
+.cal-d.today{border-color:var(--ink);font-weight:800;color:var(--ink)}
+.cal-d.on.today{color:var(--acc-ink);box-shadow:0 0 0 2px var(--panel) inset}
+.cal-d.future{opacity:.45}
+.cal-key{display:inline-block;width:.8rem;height:.8rem;border-radius:4px;vertical-align:-1px;background:var(--panel2);border:2px solid transparent}
+.cal-key.on{background:linear-gradient(135deg,var(--acc),var(--acc2))}.cal-key.today{border-color:var(--ink)}
+.cal-title{min-width:9.5rem;text-align:center}
