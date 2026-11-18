@@ -181,6 +181,8 @@ try:
     lp.goto(URL + '#/tutor/py-vars'); lp.wait_for_selector('.lesson'); check('lessons still readable at limit', 'variable' in lp.inner_text('.lesson').lower() and 'free questions' in lp.inner_text('#qh'))
     lp.goto(URL + '#/quick'); lp.click('#qf button[type=submit]'); lp.click('#go'); lp.wait_for_selector('.gate'); check('quick blocked at limit', True)
     lp.goto(URL + '#/pricing'); check('pricing shows 15/15', '15 of 15 used' in lp.inner_text('#main').replace('\n', ' '))
+    check('pricing lists all three plans with prices', all(x in lp.inner_text('#main') for x in ['₹0', '₹99', '₹199', 'Premium', 'Pro']))
+    lp.click('#up-pro'); check('pro upgrade does not pretend to charge', 'Payments are not switched on yet' in lp.inner_text('#upmsg') and lp.evaluate('LL.state.plan') == 'free')
     lp.click('#up'); check('upgrade does not pretend to charge', 'Payments are not switched on yet' in lp.inner_text('#upmsg') and lp.evaluate('LL.state.plan') == 'free')
     # next day resets
     lp.evaluate("LL._setNow(() => Date.now() + 864e5)"); lp.goto(URL + '#/detective'); lp.wait_for_selector('#stage .opt'); check('limit resets next day', True)

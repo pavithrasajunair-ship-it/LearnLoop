@@ -61,6 +61,11 @@ const KINDS = ['check', 'bug', 'predict', 'fix'];
   t('reading a lesson never creates mastery', () => { LL.view('py-loops', 'beginner'); LL.view('py-loops', 'real'); assert.strictEqual(LL.stats('py-loops').level, 'untested'); });
   t('wrong answers make a concept weak and open a misconception', () => { LL.record({concept: 'py-loops', kind: 'check', ok: false, m: 'range-end'}); LL.record({concept: 'py-loops', kind: 'bug', ok: false, m: 'range-end'});
     assert.strictEqual(LL.stats('py-loops').level, 'weak'); assert.deepStrictEqual(LL.openMisconceptions('py-loops'), [{m: 'range-end', count: 2}]); });
+  t('plans: Free 15/day, Premium 99 and Pro 199 with no daily limit', () => { const was = LL.state.plan;
+    assert.strictEqual(LL.limit(), 15); assert.strictEqual(LL.PLANS.premium.price, 99); assert.strictEqual(LL.PLANS.pro.price, 199);
+    LL.state.plan = 'premium'; assert.strictEqual(LL.limit(), Infinity); LL.state.plan = 'pro'; assert.strictEqual(LL.limit(), Infinity);
+    assert(LL.PLANS.pro.ai > LL.PLANS.premium.ai && LL.PLANS.premium.ai > LL.PLANS.free.ai); LL.state.plan = was; });
+  t('plans: an unknown plan name never unlocks anything', () => { const was = LL.state.plan; LL.state.plan = 'enterprise'; assert.strictEqual(LL.limit(), 15); LL.state.plan = '__proto__'; assert.strictEqual(LL.limit(), 15); LL.state.plan = was; });
   t('struggling student is offered a style not yet seen', () => { const r = LL.recommendStyle('py-loops', ['beginner', 'real', 'code', 'exam']); assert(r.changed && r.style === 'code'); });
   t('two correct answers clear the misconception; solid needs 4 attempts', () => {
     LL.record({concept: 'py-loops', kind: 'check', ok: true}); LL.record({concept: 'py-loops', kind: 'predict', ok: true});

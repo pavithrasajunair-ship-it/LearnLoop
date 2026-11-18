@@ -23,7 +23,7 @@ Most practice apps show the correct answer and move on. LearnLoop shows the reas
 - **Code Detective**: Find the Bug, Predict the Output, Fix the Code (Python and SQL, with test cases, hints and a solution after 3 tries) and an adaptive Challenge Mode.
 - **QuickLearn**: 5, 10, 15 and 30 minute sessions that save and resume.
 - **My Progress**: levels come only from questions you answered, plus tracked misconceptions and your learning history.
-- **Free plan**: 15 answered questions a day. Premium is planned and not on sale.
+- **Plans**: Free (15 answered questions a day), Premium (₹99/month, no daily limit) and Pro (₹199/month, most AI usage, mock exams and advanced tools). Premium and Pro are planned and not on sale, and no payment is collected anywhere.
 
 <img src="docs/04-fix-the-code.png" alt="Fix the code with a SQL query, row counts and an explanation" width="860">
 

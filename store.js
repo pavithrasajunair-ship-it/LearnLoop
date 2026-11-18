@@ -5,6 +5,14 @@ const LL = (() => {
   const KEY = 'learnloop.v1';
   const DAY = 86400000;
   const FREE_DAILY = 15; // free plan: answered questions per day (soft limit: enforced in the browser only)
+  // The three plans. Prices are in rupees per month. `ai` is the daily AI tutor message allowance that applies once the
+  // AI backend is connected (nothing uses it yet). Nobody can buy a plan yet: see the Plans page.
+  const PLANS = {
+    free: {label: 'Free', price: 0, questions: FREE_DAILY, ai: 5},
+    premium: {label: 'Premium', price: 99, questions: Infinity, ai: 30},
+    pro: {label: 'Pro', price: 199, questions: Infinity, ai: 150},
+  };
+  const planOf = () => (Object.prototype.hasOwnProperty.call(PLANS, state.plan) ? PLANS[state.plan] : PLANS.free); // an unknown plan name always means Free
   const fresh = () => ({v: 1, plan: 'free', profile: null, diagnosticDone: false, attempts: [], views: [], sessions: [], days: {}, quick: null, prefs: {goal: 5, theme: 'auto'}});
   let state = fresh();
   let now = () => Date.now();
@@ -119,7 +127,7 @@ const LL = (() => {
     return next ? {style: next, changed: true} : {style: order[(order.indexOf(seen[seen.length - 1]) + 1) % order.length], changed: true};
   }
   function todayCount() { const k = dayKey(now()); return state.attempts.filter(a => dayKey(a.t) === k).length; }
-  const limit = () => state.plan === 'premium' ? Infinity : FREE_DAILY;
+  const limit = () => planOf().questions;
   const remaining = () => Math.max(0, limit() - todayCount());
   const atLimit = () => remaining() === 0;
   const streak = () => streakInfo().current;
@@ -138,7 +146,7 @@ const LL = (() => {
   function addSession(s) { state.sessions.push(Object.assign({t: now()}, s)); save(); }
   return {
     get state() { return state; }, load, save, reset, setProfile, record, view, stats, openMisconceptions, viewedStyles,
-    recommendStyle, todayCount, limit, remaining, atLimit, FREE_DAILY, streak, streakInfo, monthGrid, weakTopics, accuracy, studiedRecently, history, addSession, dayKey, isoDay, shiftIso,
+    recommendStyle, todayCount, limit, remaining, atLimit, FREE_DAILY, PLANS, planOf, streak, streakInfo, monthGrid, weakTopics, accuracy, studiedRecently, history, addSession, dayKey, isoDay, shiftIso,
     _setNow(f) { now = f; }, _fresh: fresh, _set(s) { state = s; },
   };
 })();
