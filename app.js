@@ -54,7 +54,7 @@ function itemFor(c, kind, idx) {
 }
 /* Multiple choice with an explanation for EVERY wrong answer: the student learns why, not just what. */
 function limitGate(host) {
-  host.innerHTML = `<div class="gate"><h2>You have used today's free questions</h2><p>The free plan includes <b>${LL.FREE_DAILY} answered questions a day</b>. Your limit resets at midnight, your local time. Lessons, your progress and history stay available.</p><p class="row" style="justify-content:center"><a class="btn pri" href="#/pricing">See Premium</a><a class="btn" href="#/progress">View my progress</a></p></div>`;
+  host.innerHTML = `<div class="gate"><h2>You have used today's free questions</h2><p>The free plan includes <b>${LL.FREE_DAILY} answered questions a day</b>. Your limit resets at midnight, your local time. Lessons, your progress and history stay available.</p><p class="row" style="justify-content:center"><a class="btn pri" href="#/pricing">See plans</a><a class="btn" href="#/progress">View my progress</a></p></div>`;
   return true;
 }
 const blocked = (host, meta) => meta.src !== 'diagnostic' && LL.atLimit() && limitGate(host);
@@ -486,7 +486,7 @@ VIEWS.settings = () => {
    <label for="st">Theme</label><select id="st"><option value="auto">Match my device</option><option value="light">Light</option><option value="dark">Dark</option></select>
    <p><button class="btn pri" type="submit">Save</button> <span id="saved" class="pass" role="status"></span></p></form>
   <section class="card" style="margin:1rem 0"><h2>AI features <span class="label-setup">Setup needed</span></h2><p>The AI tutor's free-form answers, Notes Studio and AI Examiner are <b>not connected</b>. They need a small backend that holds an AI provider key (never placed in browser code). Everything marked as working in this app works without AI.</p></section>
-  <section class="card" style="margin:1rem 0"><h2>Plans</h2><div class="grid g2"><div><h3>Free <span class="pill">Current</span></h3><ul><li>Lessons, check questions and QuickLearn</li><li>Code Detective for Python and SQL</li><li>Progress saved in this browser</li></ul></div><div><h3>Premium <span class="label-setup">Planned</span></h3><ul><li>Higher AI limits</li><li>PDF notes and AI viva</li><li>Detailed performance reports</li></ul></div></div><p class="small mute">Premium is not on sale yet and no payment is collected anywhere in this app. <a href="#/pricing">See plans</a>.</p></section>
+  <section class="card" style="margin:1rem 0"><h2>Plans</h2><div class="grid g3"><div><h3>Free <span class="pill">Current</span></h3><ul><li>Lessons, check questions and QuickLearn</li><li>Code Detective for Python and SQL</li><li>15 questions a day</li></ul></div><div><h3>Premium <span class="label-setup">Planned</span> ₹99/mo</h3><ul><li>No daily limit</li><li>More AI tutor messages</li><li>PDF notes and detailed reports</li></ul></div><div><h3>Pro <span class="label-setup">Planned</span> ₹199/mo</h3><ul><li>Most AI usage</li><li>Mock exams and AI viva</li><li>Advanced learning tools</li></ul></div></div><p class="small mute">Premium is not on sale yet and no payment is collected anywhere in this app. <a href="#/pricing">See plans</a>.</p></section>
   <section class="card"><h2>Your data</h2><p class="small mute">Stored only in this browser (no account, nothing sent to a server). Clearing site data deletes it.</p><div class="row"><button class="btn" id="exp">Download my data</button><button class="btn" id="del">Delete all my data</button></div></section>`;
   $('#st').value = S.prefs.theme;
   $('#sf').addEventListener('submit', e => {
@@ -501,18 +501,24 @@ VIEWS.settings = () => {
 
 /* ---------- plans (no payment is taken: see note) ---------- */
 VIEWS.pricing = () => {
-  const used = LL.todayCount(), prem = LL.state.plan === 'premium';
-  main().innerHTML = `<h1>Plans</h1><p class="mute">Learn free every day. Premium removes the daily limit and adds the AI features as they launch.</p>
-  <div class="grid g2 plans" style="margin:1rem 0">
-   <div class="card"><h2>Free ${prem ? '' : '<span class="pill">Your plan</span>'}</h2><p class="stat">${LL.FREE_DAILY}<span class="mute" style="font-size:1rem"> questions / day</span></p>
-    <ul><li>All ${CONCEPTS.length} built-in lessons in 4 styles</li><li>Code Detective: Python, SQL and DSA</li><li>QuickLearn sessions</li><li>Progress, streak and history</li></ul>
+  const used = LL.todayCount(), cur = LL.planOf().label.toLowerCase(), P = LL.PLANS;
+  const mine = k => cur === k ? '<span class="pill">Your plan</span>' : '';
+  main().innerHTML = `<h1>Plans</h1><p class="mute">Learn free every day. Premium removes the daily limit. Pro adds the most AI and exam tools. The AI features arrive as they launch.</p>
+  <div class="grid g3 plans" style="margin:1rem 0">
+   <div class="card"><h2>Free ${mine('free')}</h2><p class="stat">₹0<span class="mute" style="font-size:1rem"> forever</span></p>
+    <ul><li><b>${LL.FREE_DAILY} answered questions</b> a day</li><li>All ${CONCEPTS.length} built-in lessons in 4 styles</li><li>Code Detective: Python, SQL and DSA</li><li>QuickLearn sessions</li><li>Basic AI tutor: ${P.free.ai} messages a day (when launched)</li></ul>
     <p class="meter">Today: <b>${Math.min(used, LL.FREE_DAILY)}</b> of ${LL.FREE_DAILY} used. Resets at midnight.</p></div>
-   <div class="card best"><h2>Premium <span class="label-setup">Not on sale yet</span></h2><p class="stat">Unlimited<span class="mute" style="font-size:1rem"> questions</span></p>
-    <ul><li>No daily question limit</li><li>AI tutor follow-ups and PDF Notes Studio (when launched)</li><li>AI viva and detailed performance reports (when launched)</li><li>Price: to be announced</li></ul>
-    <button class="btn pri" id="up">Upgrade to Premium</button><div id="upmsg" aria-live="polite"></div></div>
+   <div class="card best"><h2>Premium ${mine('premium') || '<span class="label-setup">Not on sale yet</span>'}</h2><p class="stat">₹${P.premium.price}<span class="mute" style="font-size:1rem"> / month</span></p>
+    <ul><li><b>No daily question limit</b></li><li>AI tutor follow-ups: ${P.premium.ai} messages a day (when launched)</li><li>PDF Notes Studio (when launched)</li><li>Detailed performance reports</li></ul>
+    <button class="btn pri" id="up">Upgrade to Premium</button></div>
+   <div class="card"><h2>Pro ${mine('pro') || '<span class="label-setup">Not on sale yet</span>'}</h2><p class="stat">₹${P.pro.price}<span class="mute" style="font-size:1rem"> / month</span></p>
+    <ul><li>Everything in Premium</li><li><b>Most AI usage</b>: ${P.pro.ai} messages a day (when launched)</li><li>Mock exams with marks and review (when launched)</li><li>AI viva (AI Examiner) and advanced SkillMap roadmaps (when launched)</li></ul>
+    <button class="btn pri" id="up-pro">Upgrade to Pro</button></div>
   </div>
-  <p class="small mute">The daily limit is counted in this browser. Accounts, payments and limits that follow you across devices need a backend and a payment provider, which are not connected yet.</p>`;
-  $('#up').addEventListener('click', () => { $('#upmsg').innerHTML = '<div class="notice" style="margin-top:.8rem"><b>Payments are not switched on yet.</b> Nothing was charged and your plan has not changed. Premium will open once a payment provider and accounts are connected.</div>'; });
+  <div id="upmsg" aria-live="polite"></div>
+  <p class="small mute">The daily limit is counted in this browser. Accounts, payments and limits that follow you across devices need a backend and a payment provider, which are not connected yet. Prices are planned and may change before launch.</p>`;
+  const nope = () => { $('#upmsg').innerHTML = '<div class="notice" style="margin-bottom:.8rem"><b>Payments are not switched on yet.</b> Nothing was charged and your plan has not changed. Premium and Pro will open once a payment provider and accounts are connected.</div>'; };
+  $('#up').addEventListener('click', nope); $('#up-pro').addEventListener('click', nope);
 };
 
 /* ---------- boot ---------- */
