@@ -1,4 +1,10 @@
 'use strict';
+if (typeof CONCEPTS === 'undefined' || typeof LL === 'undefined' || typeof SQLEngine === 'undefined' || typeof Runner === 'undefined') {
+  // a script failed to load (offline, blocked or cached half-way): say so instead of leaving a blank page
+  document.getElementById('main').innerHTML = '<section class="card" style="max-width:620px;margin:2rem auto"><h1>LearnLoop could not load</h1><p>Some of the app files did not download. Check your connection, then reload. Your saved progress is not affected.</p><p><button class="btn pri" id="reload">Reload</button></p></section>';
+  document.getElementById('reload').addEventListener('click', () => location.reload());
+  throw new Error('LearnLoop: required script missing');
+}
 /* LearnLoop Phase 1 - browser app. Everything the student does feeds one history (store.js). */
 const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));

@@ -18,8 +18,27 @@ const LL = (() => {
   let now = () => Date.now();
   let mem = null; // fallback when localStorage is unavailable
 
+  // Saved data can be edited, truncated or from another version: keep only well-formed parts, fall back to defaults for the rest
+  function sanitize(s) {
+    const f = fresh(), isObj = x => x && typeof x === 'object' && !Array.isArray(x);
+    const list = (x, ok) => (Array.isArray(x) ? x.filter(ok) : []);
+    const o = Object.assign(f, s);
+    o.plan = o.plan === 'premium' ? 'premium' : 'free';
+    o.profile = isObj(s.profile) && typeof s.profile.name === 'string' && s.profile.name.trim() ? s.profile : null;
+    o.diagnosticDone = !!s.diagnosticDone;
+    o.attempts = list(s.attempts, a => isObj(a) && typeof a.concept === 'string' && Number.isFinite(+a.t));
+    o.views = list(s.views, a => isObj(a) && Number.isFinite(+a.t));
+    o.sessions = list(s.sessions, isObj);
+    o.days = isObj(s.days) ? s.days : {};
+    o.quick = isObj(s.quick) && Array.isArray(s.quick.steps) && s.quick.steps.length ? s.quick : null;
+    const d = fresh().prefs, p = isObj(s.prefs) ? s.prefs : {};
+    o.prefs = Object.assign(d, p);
+    if (!(+o.prefs.goal > 0)) o.prefs.goal = fresh().prefs.goal;
+    if (!['auto', 'light', 'dark'].includes(o.prefs.theme)) o.prefs.theme = 'auto';
+    return o;
+  }
   function load() {
-    try { const raw = localStorage.getItem(KEY); if (raw) { const s = JSON.parse(raw); if (s && s.v === 1) state = Object.assign(fresh(), s, {prefs: Object.assign(fresh().prefs, s.prefs || {})}); } }
+    try { const raw = localStorage.getItem(KEY); if (raw) { const s = JSON.parse(raw); if (s && typeof s === 'object' && s.v === 1) state = sanitize(s); } }
     catch (e) { if (mem) state = mem; }
     return state;
   }
